@@ -5,7 +5,7 @@ import D3Example from './Components/App2';
 function App() {
   return (
     <div>
-      <h1>Three.js and D3.js Examples</h1>
+
       <ThreeJSExample />
       
     </div>
