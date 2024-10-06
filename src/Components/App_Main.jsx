@@ -250,29 +250,33 @@ sun.scale.set(0.03, 0.03, 0.03); // Cambiar a 0.1, 0.1, 0.1
 
   const loader2 = new GLTFLoader();
 const planets = [];
-const planetScaleFactor = 1; // Factor de escala para aumentar el tamaño de los planetas
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Luz ambiental blanca con intensidad 0.5
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); // Luz ambiental blanca con intensidad 0.5
 scene.add(ambientLight);
 
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1); // Luz direccional blanca con intensidad 1
 directionalLight.position.set(100, 100, 100); // Posición de la luz
 scene.add(directionalLight);
+
+const sunScale = 0.03; // Escala del Sol
+const sunRadiusReference = 100; // Valor de referencia para el radio del Sol (puedes ajustarlo como desees)
+const planetScaleFactor = sunRadiusReference; // Factor de escala relativo, como 1.0 para planetas en tu definición
+
 planetsData.forEach((planet) => {
   // Cargar el modelo del planeta desde /planetas/planeta.model
   loader2.load(`/planetas/${planet.model}`, (gltf) => {
     const planetMesh = gltf.scene;
 
-    // Escalar el modelo según los datos del planeta
-    //planetMesh.scale.set(planet.radius * planetScaleFactor, planet.radius * planetScaleFactor, planet.radius * planetScaleFactor);
-    planetMesh.scale.set(0.003, 0.003, 0.003); // Cambiar a 0.1, 0.1, 0.1
+    // Escalado del modelo del planeta
+    const planetScale = planet.radius * (sunRadiusReference / planetScaleFactor)/100; // Escalado en base a la referencia del Sol
+    planetMesh.scale.set(planetScale, planetScale, planetScale); // Aplicar el escalado relativo
     planetMesh.name = planet.name;
     planets.push({ mesh: planetMesh, ...planet });
     scene.add(planetMesh);
 
     // Crear etiqueta
     const label = createLabel(planet.name, 50);
-    label.position.set(0, (planet.radius * planetScaleFactor) + 5, 0); // Posicionar por encima del planeta
+    label.position.set(0, (planet.radius * (sunRadiusReference / planetScaleFactor)) + 5, 0); // Posicionar por encima del planeta
     label.position.x = -label.scale.x / 2; // Centrar en el eje X
     planetMesh.add(label); // Agregar la etiqueta al planeta
 
@@ -287,13 +291,15 @@ planetsData.forEach((planet) => {
     });
     const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
     scene.add(orbitLine);
-    
+
   }, (xhr) => {
     console.log((xhr.loaded / xhr.total * 100) + '% cargado para ' + planet.name);
   }, (error) => {
     console.error('Error al cargar el modelo de ' + planet.name + ':', error);
   });
 });
+
+
 
 
 
@@ -316,8 +322,7 @@ planetsData.forEach((planet) => {
 
     const animate = () => {
       if (!paused) {
-
-        
+    
         planets.forEach((planet) => {
           const time = Date.now() * speed * planet.orbitalSpeed;
           const M = planet.M0 + time;
@@ -334,10 +339,12 @@ planetsData.forEach((planet) => {
             0,
             r * scale * Math.sin(ν)
           );
+    
+          // Añadir rotación del planeta (rotación en el eje Y)
+          const rotationSpeed = planet.rotationSpeed || 0.01; // Velocidad de rotación del planeta
+          planet.mesh.rotation.y += rotationSpeed; // Rotación sobre el eje Y
         });
-        
-
-        
+    
         // Seguir al planeta seleccionado
         if (followPlanet) {
           const planetMesh = planets.find((p) => p.name === followPlanet);
@@ -356,12 +363,13 @@ planetsData.forEach((planet) => {
           setPlanetInfo(null);
         }
       }
-
+    
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
     };
-
+    
     animate();
+    
 
     // Manejar clics en los planetas
     const handleClick = (event) => {
