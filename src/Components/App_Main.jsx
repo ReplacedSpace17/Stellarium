@@ -167,6 +167,16 @@ const SolarSystem = () => {
 
   const trailPoints = {}; // Objeto para almacenar los puntos de rastro de cada planeta
 
+  const createSun = (scene) => {
+    const loader = new GLTFLoader();
+    loader.load('/planetas/Sol.glb', (gltf) => {
+      const sun = gltf.scene;
+      sun.scale.set(5, 5, 5); // Escalar el modelo según sea necesario
+      scene.add(sun);
+    }, undefined, (error) => {
+      console.error('Error al cargar el modelo del Sol:', error);
+    });
+  };
   
   useEffect(() => {
     const scene = new THREE.Scene();
@@ -187,11 +197,38 @@ const SolarSystem = () => {
     light.position.set(0, 0, 0);
     scene.add(light);
 
-    // Crear sol
-    const sunGeometry = new THREE.SphereGeometry(5, 32, 32);
-    const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-    const sun = new THREE.Mesh(sunGeometry, sunMaterial);
-    scene.add(sun);
+
+
+
+  // Crear sol
+const loader = new GLTFLoader();
+loader.load('/planetas/Sol.glb', (gltf) => {
+  const sun = gltf.scene;
+
+  // Escalar el modelo más pequeño
+// Escalar el modelo más pequeño
+sun.scale.set(0.03, 0.03, 0.03); // Cambiar a 0.1, 0.1, 0.1
+ // Ajusta la escala a 0.5, 0.5, 0.5 para hacerlo más pequeño
+
+  // Opcional: Ajustar la posición del modelo
+  sun.position.set(0, 0, 0); // Asegúrate de que esté en la vista de la cámara
+
+  scene.add(sun);
+
+  // Chequear los hijos de la escena
+  gltf.scene.traverse((child) => {
+    if (child.isMesh) {
+      console.log('Mesh encontrado:', child);
+    }
+  });
+}, (xhr) => {
+  console.log((xhr.loaded / xhr.total * 100) + '% cargado');
+}, (error) => {
+  console.error('Error al cargar el modelo del Sol:', error);
+});
+
+    
+    
 
     // Crear asteroides y añadirlos a la escena
   asteroidsData.forEach((asteroid) => {
@@ -211,36 +248,53 @@ const SolarSystem = () => {
       scene.add(asteroidMesh);
     });
 
-   // Crear planetas y sus órbitas
+  const loader2 = new GLTFLoader();
 const planets = [];
 const planetScaleFactor = 1; // Factor de escala para aumentar el tamaño de los planetas
 
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Luz ambiental blanca con intensidad 0.5
+scene.add(ambientLight);
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1); // Luz direccional blanca con intensidad 1
+directionalLight.position.set(100, 100, 100); // Posición de la luz
+scene.add(directionalLight);
 planetsData.forEach((planet) => {
-  const geometry = new THREE.SphereGeometry(planet.radius * planetScaleFactor, 32, 32); // Aumenta el radio
-  const material = new THREE.MeshBasicMaterial({ color: planet.color });
-  const planetMesh = new THREE.Mesh(geometry, material);
-  planetMesh.name = planet.name;
-  planets.push({ mesh: planetMesh, ...planet });
-  scene.add(planetMesh);
-  
-  // Crear etiqueta
-  const label = createLabel(planet.name, 50);
-  label.position.set(0, (planet.radius * planetScaleFactor) + 5, 0); // Posicionar por encima del planeta
-  label.position.x = -label.scale.x / 2; // Centrar en el eje X
-  planetMesh.add(label); // Agregar la etiqueta al planeta
-  
-  // Crear órbitas
-  const orbitPoints = generateOrbitPoints(planet.a * scale, planet.e);
-  console.log('Orbit Points for', planet.name, orbitPoints); // Depuración
-  const orbitGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
-  const orbitMaterial = new THREE.LineBasicMaterial({
-    color: 0xffffff,
-    opacity: 0.5,
-    transparent: true,
+  // Cargar el modelo del planeta desde /planetas/planeta.model
+  loader2.load(`/planetas/${planet.model}`, (gltf) => {
+    const planetMesh = gltf.scene;
+
+    // Escalar el modelo según los datos del planeta
+    //planetMesh.scale.set(planet.radius * planetScaleFactor, planet.radius * planetScaleFactor, planet.radius * planetScaleFactor);
+    planetMesh.scale.set(0.003, 0.003, 0.003); // Cambiar a 0.1, 0.1, 0.1
+    planetMesh.name = planet.name;
+    planets.push({ mesh: planetMesh, ...planet });
+    scene.add(planetMesh);
+
+    // Crear etiqueta
+    const label = createLabel(planet.name, 50);
+    label.position.set(0, (planet.radius * planetScaleFactor) + 5, 0); // Posicionar por encima del planeta
+    label.position.x = -label.scale.x / 2; // Centrar en el eje X
+    planetMesh.add(label); // Agregar la etiqueta al planeta
+
+    // Crear órbitas
+    const orbitPoints = generateOrbitPoints(planet.a * scale, planet.e);
+    console.log('Orbit Points for', planet.name, orbitPoints); // Depuración
+    const orbitGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
+    const orbitMaterial = new THREE.LineBasicMaterial({
+      color: 0xffffff,
+      opacity: 0.5,
+      transparent: true,
+    });
+    const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
+    scene.add(orbitLine);
+    
+  }, (xhr) => {
+    console.log((xhr.loaded / xhr.total * 100) + '% cargado para ' + planet.name);
+  }, (error) => {
+    console.error('Error al cargar el modelo de ' + planet.name + ':', error);
   });
-  const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
-  scene.add(orbitLine);
 });
+
 
 
 
