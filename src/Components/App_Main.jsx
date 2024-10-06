@@ -9,7 +9,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import asteroidsData from './data/AsteroidesG.json';
 import asteroidePequeño from './data/AsteroidesP.json';
 import ateroidePHA from './data/AteroidsPHAS.json';
-
+import cometasEnanos from './data/cometas_enanos.json';
 // Función para resolver la ecuación de Kepler
 const solveKepler = (M, e, tolerance = 1e-6) => {
   let E = M;
@@ -51,6 +51,17 @@ const createAsteroid = (asteroid, type) => {
     return asteroidMesh;
   }
   if(type === 'PHA'){
+    const geometry = new THREE.SphereGeometry(asteroid.diameter / 2, 16, 16);
+    const material = new THREE.MeshBasicMaterial({ color: 0xFF0099 });
+    const asteroidMesh = new THREE.Mesh(geometry, material);
+    asteroidMesh.name = asteroid.name;
+    
+    // Asegúrate de que la posición inicial sea correcta
+    const r = asteroid.a * scale; // Usa el semieje mayor
+    asteroidMesh.position.set(r * Math.cos(0), 0, r * Math.sin(0)); // Coloca el asteroide en la órbita
+    return asteroidMesh;
+  }
+  if(type === 'COMETAS'){
     const geometry = new THREE.SphereGeometry(asteroid.diameter / 2, 16, 16);
     const material = new THREE.MeshBasicMaterial({ color: 0xFF0000 });
     const asteroidMesh = new THREE.Mesh(geometry, material);
@@ -123,6 +134,40 @@ const generateOrbitPoints = (a, e, steps = 360) => {
   return points;
 };
 
+const generateAsteroidOrbitPoints = (a, e, i, w, steps = 360) => {
+  const points = [];
+  const inclination = (i * Math.PI) / 180; // Convertir inclinación a radianes
+  const argumentOfPeriapsis = (w * Math.PI) / 180; // Convertir w a radianes
+
+  for (let j = 0; j < steps; j++) {
+    const M = (j / steps) * 2 * Math.PI; // Anomalía media
+    const E = solveKepler(M, e); // Resolver la anomalía excéntrica
+    const ν = 2 * Math.atan2(
+      Math.sqrt(1 + e) * Math.sin(E / 2),
+      Math.sqrt(1 - e) * Math.cos(E / 2)
+    ); // Anomalía verdadera
+    const r = (a * (1 - e ** 2)) / (1 + e * Math.cos(ν)); // Distancia radial
+
+    // Coordenadas en el plano XY, considerando el argumento del periastro
+    const x = r * Math.cos(ν);
+    const z = r * Math.sin(ν);
+
+    // Aplicar la rotación por el argumento del periapsis
+    const x_rotated = x * Math.cos(argumentOfPeriapsis) - z * Math.sin(argumentOfPeriapsis);
+    const z_rotated = x * Math.sin(argumentOfPeriapsis) + z * Math.cos(argumentOfPeriapsis);
+    
+    // Aplicar la inclinación
+    const y = r * Math.sin(inclination); // Mantener la inclinación en la coordenada Y
+
+    // Agregar el punto rotado y ajustado
+    points.push(new THREE.Vector3(x_rotated, y, z_rotated));
+  }
+  
+  return points;
+};
+
+
+
 const createStarField = (scene) => {
   const starGeometry = new THREE.BufferGeometry();
   const starMaterial = new THREE.PointsMaterial({
@@ -178,7 +223,9 @@ const SolarSystem = () => {
     });
   };
   
+  
   useEffect(() => {
+    
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
       75,
@@ -231,22 +278,116 @@ sun.scale.set(0.03, 0.03, 0.03); // Cambiar a 0.1, 0.1, 0.1
     
 
     // Crear asteroides y añadirlos a la escena
-  asteroidsData.forEach((asteroid) => {
-    const asteroidMesh = createAsteroid(asteroid, "GRANDE");
-    scene.add(asteroidMesh);
+// Crear asteroides y añadirlos a la escena
+asteroidsData.forEach((asteroid) => {
+  const asteroidMesh = createAsteroid(asteroid, "GRANDE");
+  scene.add(asteroidMesh);
+
+  // Crear órbitas
+  const orbitPoints = generateAsteroidOrbitPoints(
+    asteroid.a * scale,   // Semieje mayor
+    asteroid.e,           // Excentricidad
+    asteroid.i,           // Inclinación
+    asteroid.w            // Argumento del periastro
+  );
+  
+  console.log('Orbit Points for', asteroid.name, orbitPoints); // Depuración
+  
+  const orbitGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
+  const orbitMaterial = new THREE.LineBasicMaterial({
+    color: 0xffffff,
+    opacity: 0.15,
+    transparent: true,
   });
+  
+  const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
+  scene.add(orbitLine);
+});
+
+
+
 
     // Crear asteroides y añadirlos a la escena
-    asteroidePequeño.forEach((asteroid) => {
-      const asteroidMesh = createAsteroid(asteroid, "PEQUEÑO");
-      scene.add(asteroidMesh);
-    });
+// Crear asteroides pequeños y añadirlos a la escena
+asteroidePequeño.forEach((asteroid) => {
+  const asteroidMesh = createAsteroid(asteroid, "PEQUEÑO");
+  scene.add(asteroidMesh);
+
+  // Crear órbitas para asteroides pequeños
+  const orbitPoints = generateAsteroidOrbitPoints(
+    asteroid.a * scale,   // Semieje mayor
+    asteroid.e,           // Excentricidad
+    asteroid.i,           // Inclinación
+    asteroid.w            // Argumento del periastro
+  );
+
+  console.log('Orbit Points for', asteroid.name, orbitPoints); // Depuración
+
+  const orbitGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
+  const orbitMaterial = new THREE.LineBasicMaterial({
+    color: 0xffffff,
+    opacity: 0.15,
+    transparent: true,
+  });
+
+  const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
+  scene.add(orbitLine);
+});
+
 
      // Crear asteroides y añadirlos a la escena
      ateroidePHA.forEach((asteroid) => {
       const asteroidMesh = createAsteroid(asteroid, "PHA");
       scene.add(asteroidMesh);
+       // Crear órbitas para asteroides pequeños
+  const orbitPoints = generateAsteroidOrbitPoints(
+    asteroid.a * scale,   // Semieje mayor
+    asteroid.e,           // Excentricidad
+    asteroid.i,           // Inclinación
+    asteroid.w            // Argumento del periastro
+  );
+
+  console.log('Orbit Points for', asteroid.name, orbitPoints); // Depuración
+
+  const orbitGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
+  const orbitMaterial = new THREE.LineBasicMaterial({
+    color: 0xffffff,
+    opacity: 0.15,
+    transparent: true,
+  });
+
+  const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
+  scene.add(orbitLine);
     });
+
+
+//cometas enanos
+// Crear cometas enanos y añadirlos a la escena
+cometasEnanos.forEach((cometa) => {
+  const cometaMesh = createAsteroid(cometa, "COMETAS"); // Cambiar el tipo si es necesario
+  scene.add(cometaMesh);
+
+  // Crear órbitas para cometas enanos
+  const orbitPoints = generateAsteroidOrbitPoints(
+    cometa.a * scale,   // Semieje mayor
+    cometa.e,           // Excentricidad
+    cometa.i,           // Inclinación
+    cometa.w            // Argumento del periastro
+  );
+
+  console.log('Orbit Points for', cometa.name, orbitPoints); // Depuración
+
+  const orbitGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
+  const orbitMaterial = new THREE.LineBasicMaterial({
+    color: 0x00ff00, // Puedes cambiar el color si lo deseas
+    opacity: 0.15,
+    transparent: true,
+  });
+
+  const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
+  scene.add(orbitLine);
+});
+
 
   const loader2 = new GLTFLoader();
 const planets = [];
@@ -263,22 +404,22 @@ const sunRadiusReference = 100; // Valor de referencia para el radio del Sol (pu
 const planetScaleFactor = sunRadiusReference; // Factor de escala relativo, como 1.0 para planetas en tu definición
 
 planetsData.forEach((planet) => {
-  // Cargar el modelo del planeta desde /planetas/planeta.model
   loader2.load(`/planetas/${planet.model}`, (gltf) => {
     const planetMesh = gltf.scene;
 
     // Escalado del modelo del planeta
-    const planetScale = planet.radius * (sunRadiusReference / planetScaleFactor)/100; // Escalado en base a la referencia del Sol
-    planetMesh.scale.set(planetScale, planetScale, planetScale); // Aplicar el escalado relativo
+    const planetScale = planet.radius * (sunRadiusReference / planetScaleFactor) / 100;
+    planetMesh.scale.set(planetScale, planetScale, planetScale);
     planetMesh.name = planet.name;
     planets.push({ mesh: planetMesh, ...planet });
     scene.add(planetMesh);
 
-    // Crear etiqueta
-    const label = createLabel(planet.name, 50);
-    label.position.set(0, (planet.radius * (sunRadiusReference / planetScaleFactor)) + 5, 0); // Posicionar por encima del planeta
+    const label = createLabel(planet.name, 500); // Usar un tamaño más razonable
+    label.position.set(1, (planet.radius * (sunRadiusReference / planetScaleFactor)) + 5, 0); // Posición por encima del planeta
     label.position.x = -label.scale.x / 2; // Centrar en el eje X
-    planetMesh.add(label); // Agregar la etiqueta al planeta
+    
+    // Agregar la etiqueta al planeta
+    planetMesh.add(label);
 
     // Crear órbitas
     const orbitPoints = generateOrbitPoints(planet.a * scale, planet.e);
@@ -298,6 +439,8 @@ planetsData.forEach((planet) => {
     console.error('Error al cargar el modelo de ' + planet.name + ':', error);
   });
 });
+
+
 
 
 
@@ -344,9 +487,117 @@ planetsData.forEach((planet) => {
           const rotationSpeed = planet.rotationSpeed || 0.01; // Velocidad de rotación del planeta
           planet.mesh.rotation.y += rotationSpeed; // Rotación sobre el eje Y
         });
-    
+        // animacion asteroides grandes
+        asteroidsData.forEach((asteroid) => {
+          // Cálculo del tiempo
+          const time = Date.now() * speed * asteroid.per_y; // velocidad orbital ajustada por el período
+          const M = asteroid.M0 || 0 + time; // Media anómala (puedes inicializar M0 si es necesario)
+          const E = solveKepler(M, asteroid.e); // Resolución de la ecuación de Kepler
+          const ν = 2 * Math.atan2(
+            Math.sqrt(1 + asteroid.e) * Math.sin(E / 2),
+            Math.sqrt(1 - asteroid.e) * Math.cos(E / 2)
+          );
+          const r = (asteroid.a * (1 - asteroid.e ** 2)) / (1 + asteroid.e * Math.cos(ν)); // Distancia radial
+      
+          // Actualiza la posición del asteroide usando el factor de escalado
+          const asteroidMesh = scene.getObjectByName(asteroid.name); // Obtén el mesh del asteroide por su nombre
+          if (asteroidMesh) {
+            asteroidMesh.position.set(
+              r * scale * Math.cos(ν),
+              r * scale * Math.sin(ν) * Math.sin(asteroid.i * (Math.PI / 180)), // Incluye inclinación
+              r * scale * Math.sin(ν) * Math.cos(asteroid.i * (Math.PI / 180)) // Incluye inclinación
+            );
+      
+            // Añadir rotación del asteroide (opcional)
+            const rotationSpeed = asteroid.rotationSpeed || 0.01; // Velocidad de rotación del asteroide
+            asteroidMesh.rotation.y += rotationSpeed; // Rotación sobre el eje Y
+          }
+        });
+        
+         // animacion asteroides pequeño
+         asteroidePequeño.forEach((asteroid) => {
+          // Cálculo del tiempo
+          const time = Date.now() * speed * asteroid.per_y; // velocidad orbital ajustada por el período
+          const M = asteroid.M0 || 0 + time; // Media anómala (puedes inicializar M0 si es necesario)
+          const E = solveKepler(M, asteroid.e); // Resolución de la ecuación de Kepler
+          const ν = 2 * Math.atan2(
+            Math.sqrt(1 + asteroid.e) * Math.sin(E / 2),
+            Math.sqrt(1 - asteroid.e) * Math.cos(E / 2)
+          );
+          const r = (asteroid.a * (1 - asteroid.e ** 2)) / (1 + asteroid.e * Math.cos(ν)); // Distancia radial
+      
+          // Actualiza la posición del asteroide usando el factor de escalado
+          const asteroidMesh = scene.getObjectByName(asteroid.name); // Obtén el mesh del asteroide por su nombre
+          if (asteroidMesh) {
+            asteroidMesh.position.set(
+              r * scale * Math.cos(ν),
+              r * scale * Math.sin(ν) * Math.sin(asteroid.i * (Math.PI / 180)), // Incluye inclinación
+              r * scale * Math.sin(ν) * Math.cos(asteroid.i * (Math.PI / 180)) // Incluye inclinación
+            );
+      
+            // Añadir rotación del asteroide (opcional)
+            const rotationSpeed = asteroid.rotationSpeed || 0.01; // Velocidad de rotación del asteroide
+            asteroidMesh.rotation.y += rotationSpeed; // Rotación sobre el eje Y
+          }
+        });
+
+            // animacion asteroides pha
+            ateroidePHA.forEach((asteroid) => {
+              // Cálculo del tiempo
+              const time = Date.now() * speed * asteroid.per_y; // velocidad orbital ajustada por el período
+              const M = asteroid.M0 || 0 + time; // Media anómala (puedes inicializar M0 si es necesario)
+              const E = solveKepler(M, asteroid.e); // Resolución de la ecuación de Kepler
+              const ν = 2 * Math.atan2(
+                Math.sqrt(1 + asteroid.e) * Math.sin(E / 2),
+                Math.sqrt(1 - asteroid.e) * Math.cos(E / 2)
+              );
+              const r = (asteroid.a * (1 - asteroid.e ** 2)) / (1 + asteroid.e * Math.cos(ν)); // Distancia radial
+          
+              // Actualiza la posición del asteroide usando el factor de escalado
+              const asteroidMesh = scene.getObjectByName(asteroid.name); // Obtén el mesh del asteroide por su nombre
+              if (asteroidMesh) {
+                asteroidMesh.position.set(
+                  r * scale * Math.cos(ν),
+                  r * scale * Math.sin(ν) * Math.sin(asteroid.i * (Math.PI / 180)), // Incluye inclinación
+                  r * scale * Math.sin(ν) * Math.cos(asteroid.i * (Math.PI / 180)) // Incluye inclinación
+                );
+          
+                // Añadir rotación del asteroide (opcional)
+                const rotationSpeed = asteroid.rotationSpeed || 0.01; // Velocidad de rotación del asteroide
+                asteroidMesh.rotation.y += rotationSpeed; // Rotación sobre el eje Y
+              }
+            });
+
+            // Animación de cometas enanos
+cometasEnanos.forEach((cometa) => {
+  // Cálculo del tiempo
+  const time = Date.now() * speed * cometa.per_y; // Velocidad orbital ajustada por el período
+  const M = (cometa.M0 || 0) + time; // Media anómala (inicializa M0 si es necesario)
+  const E = solveKepler(M, cometa.e); // Resolución de la ecuación de Kepler
+  const ν = 2 * Math.atan2(
+    Math.sqrt(1 + cometa.e) * Math.sin(E / 2),
+    Math.sqrt(1 - cometa.e) * Math.cos(E / 2)
+  );
+  const r = (cometa.a * (1 - cometa.e ** 2)) / (1 + cometa.e * Math.cos(ν)); // Distancia radial
+
+  // Actualiza la posición del cometa usando el factor de escalado
+  const cometaMesh = scene.getObjectByName(cometa.name); // Obtén el mesh del cometa por su nombre
+  if (cometaMesh) {
+    cometaMesh.position.set(
+      r * scale * Math.cos(ν),
+      r * scale * Math.sin(ν) * Math.sin(cometa.i * (Math.PI / 180)), // Incluye inclinación
+      r * scale * Math.sin(ν) * Math.cos(cometa.i * (Math.PI / 180)) // Incluye inclinación
+    );
+
+    // Añadir rotación del cometa (opcional)
+    const rotationSpeed = cometa.rotationSpeed || 0.01; // Velocidad de rotación del cometa
+    cometaMesh.rotation.y += rotationSpeed; // Rotación sobre el eje Y
+  }
+});
+
         // Seguir al planeta seleccionado
         if (followPlanet) {
+          
           const planetMesh = planets.find((p) => p.name === followPlanet);
           if (planetMesh) {
             const distance = 30;
@@ -401,27 +652,48 @@ planetsData.forEach((planet) => {
     };
   }, [paused, followPlanet, speed]);
 
-  const createLabel = (text, fontSize) => {
+function createLabel(text, size) {
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
-  
-    // Ajustar el tamaño de la fuente dinámicamente
-    context.font = `${fontSize}px Arial`;
-    context.fillStyle = 'white';
-    context.fillText(text, 0, fontSize);
-  
+    context.font = `${size}px Arial`;
+    
+    // Configurar el color de la etiqueta aquí
+    context.fillStyle = 'white'; // Establecer el color a blanco
+    context.fillText(text, 0, size);
+    
     const texture = new THREE.Texture(canvas);
     texture.needsUpdate = true;
-  
-    const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+
+    const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
     const sprite = new THREE.Sprite(spriteMaterial);
-  
-    // Ajustar la escala del sprite dependiendo del tamaño del texto
-    sprite.scale.set(fontSize * 0.5, fontSize * 0.25, 1);
-    
+    sprite.scale.set(size / 100, size / 100, 1); // Ajustar la escala del sprite
+
     return sprite;
-  };
+}
+
   
+const handleClick = (event) => {
+  // Normalizar las coordenadas del mouse
+  mouseRef.current.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouseRef.current.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  // Actualizar el raycaster
+  raycasterRef.current.setFromCamera(mouseRef.current, cameraRef.current);
+
+  // Calcular los objetos intersectados
+  const intersects = raycasterRef.current.intersectObjects(planets.map(planet => planet.mesh));
+
+  if (intersects.length > 0) {
+    const selectedPlanet = intersects[0].object;
+
+    // Establecer el estado de seguir al planeta seleccionado
+    setFollowPlanet(selectedPlanet);
+
+    // Actualizar la información del planeta (para mostrar en la etiqueta)
+    const planetData = planets.find(planet => planet.mesh === selectedPlanet);
+    setPlanetInfo(planetData);
+  }
+};
 
   
   return (
