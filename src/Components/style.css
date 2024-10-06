@@ -1,25 +1,129 @@
-/* Estilos para el cuadro de información del planeta */
-.card{
-    position: absolute;
-    top: 100px;
-    left: 10px;
-    color: #fff;
-    z-index: 1;
-    background: rgb(17, 60, 95); /* Fondo semi-transparente */
-    border-radius: 8px; /* Bordes redondeados */
-    border: 1px solid #fff; /* Borde blanco */
-    padding: 15px; /* Espaciado interno */
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Sombra para destacar */
-    max-width: 250px; /* Ancho máximo */
+.app-container {
+  position: relative;
+  height: 100vh;
+  background-color: #1c1c1c;
+  color: #fff;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.controls {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1;
+}
+
+.search-input {
+  padding: 10px;
+  border-radius: 5px;
+  border: none;
+  margin-right: 10px;
+  background-color: #333;
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: background-color 0.3s;
+}
+
+.search-input:focus {
+  background-color: #444;
+  outline: none;
+}
+
+.filter-button, .control-button {
+  padding: 10px 15px;
+  border-radius: 5px;
+  border: none;
+  background-color: #007BFF;
+  color: #fff;
+  cursor: pointer;
+  margin-right: 5px;
+  transition: background-color 0.3s, transform 0.3s;
+}
+
+.filter-button:hover, .control-button:hover {
+  background-color: #0056b3;
+  transform: scale(1.05);
+}
+
+.card {
+  position: absolute; /* Para que flote sobre la pantalla */
+  top: 20px; /* Ajusta la distancia desde la parte superior de la pantalla */
+  right: 20px; /* Ajusta la distancia desde la parte derecha de la pantalla */
+  background-color: #222; /* Fondo oscuro para contraste */
+  padding: 20px; /* Espacio adicional alrededor del contenido */
+  border-radius: 12px; /* Bordes más redondeados */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.7); /* Sombra más pronunciada */
+  color: #fff; /* Color de texto blanco */
+  z-index: 2; /* Asegura que el card esté por encima de otros elementos */
+  width: 320px; /* Ancho más amplio */
+  border: 1px solid #007BFF; /* Borde azul de 1px */
+  transition: transform 0.3s ease, opacity 0.3s ease; /* Transiciones suaves */
+  transform: translateY(10px); /* Animación inicial: ligeramente desplazado hacia abajo */
+  opacity: 0; /* Empieza invisible */
+  animation: fadeInCard 0.5s forwards ease; /* Animación para que aparezca suavemente */
+}
+
+/* Definir la animación para que aparezca el card */
+@keyframes fadeInCard {
+  0% {
+    transform: translateY(10px); /* Empieza desplazado hacia abajo */
+    opacity: 0; /* Comienza invisible */
   }
-  
-  .planet-info h2 {
-    margin: 0;
-    font-size: 1.5rem; /* Tamaño de fuente del título */
+  100% {
+    transform: translateY(0); /* Llega a su posición original */
+    opacity: 1; /* Se vuelve visible */
   }
-  
-  .planet-info p {
-    margin: 5px 0; /* Espaciado entre párrafos */
-    font-size: 1rem; /* Tamaño de fuente de los párrafos */
-  }
-  
+}
+
+.card h2 {
+  font-size: 1.5rem; /* Tamaño más grande para el título */
+  margin-bottom: 10px; /* Espacio inferior */
+  color: #00d1ff; /* Color llamativo para el título */
+}
+
+.card p {
+  margin-bottom: 8px; /* Espacio entre los párrafos */
+  line-height: 1.6; /* Mejorar la legibilidad */
+}
+
+.unfollow-button {
+  padding: 10px 15px;
+  border-radius: 5px;
+  border: none;
+  background-color: #FF4136; /* Color rojo para llamar la atención */
+  color: #fff;
+  cursor: pointer;
+  margin-top: 15px; /* Espacio entre el contenido y el botón */
+  transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.unfollow-button:hover {
+  background-color: #e12d1f; /* Color rojo más oscuro al pasar el cursor */
+  transform: scale(1.05); /* Efecto de agrandamiento suave al hacer hover */
+}
+
+
+
+.search-input {
+  padding: 12px 15px; /* Mayor padding para más espacio */
+  border-radius: 25px; /* Bordes más redondeados */
+  border: 2px solid #007BFF; /* Borde azul más grueso */
+  margin-right: 10px;
+  background-color: #333;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); /* Sombra más pronunciada */
+  transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s; /* Transiciones suaves */
+  outline: none; /* Quitar el contorno por defecto */
+}
+
+.search-input::placeholder {
+  color: #bbb; /* Color del texto del placeholder */
+  opacity: 1; /* Asegurar que el placeholder sea visible */
+}
+
+.search-input:focus {
+  background-color: #444; /* Color de fondo más claro al enfocarse */
+  border-color: #0056b3; /* Cambiar el color del borde al enfocarse */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.7); /* Aumentar la sombra al enfocarse */
+}

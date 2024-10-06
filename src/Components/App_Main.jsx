@@ -10,6 +10,9 @@ import asteroidsData from './data/AsteroidesG.json';
 import asteroidePequeño from './data/AsteroidesP.json';
 import ateroidePHA from './data/AteroidsPHAS.json';
 import cometasEnanos from './data/cometas_enanos.json';
+import { or } from 'three/webgpu';
+
+//vaciar repe
 // Función para resolver la ecuación de Kepler
 const solveKepler = (M, e, tolerance = 1e-6) => {
   let E = M;
@@ -75,41 +78,6 @@ const createAsteroid = (asteroid, type) => {
  
 };
 
-// Función para crear polvo azul orbitando alrededor de un objeto
-const createOrbitingDust = (scene, centerObject) => {
-  const dustGeometry = new THREE.BufferGeometry();
-  const dustMaterial = new THREE.PointsMaterial({
-    color: 0x00bfff, // Azul claro
-    size: 0.2,       // Tamaño de cada partícula
-    opacity: 0.6,
-    transparent: true,
-  });
-
-  const dustVertices = [];
-  const numParticles = 500; // Número de partículas de polvo
-  const dustRadius = 20;    // Radio de la órbita de las partículas
-
-  for (let i = 0; i < numParticles; i++) {
-    // Generar partículas en una esfera alrededor del centro del objeto
-    const angle = Math.random() * 2 * Math.PI;
-    const radius = dustRadius + (Math.random() - 0.5) * dustRadius * 0.5; // Varía el radio
-    const x = centerObject.position.x + radius * Math.cos(angle);
-    const z = centerObject.position.z + radius * Math.sin(angle);
-    const y = (Math.random() - 0.5) * dustRadius; // Añadir variación en el eje Y
-
-    dustVertices.push(x, y, z);
-  }
-
-  dustGeometry.setAttribute(
-    'position',
-    new THREE.Float32BufferAttribute(dustVertices, 3)
-  );
-
-  const dust = new THREE.Points(dustGeometry, dustMaterial);
-  scene.add(dust);
-
-  return dust;
-};
 
 // Función para generar los puntos de la órbita
 
@@ -208,10 +176,21 @@ const SolarSystem = () => {
   const raycasterRef = useRef(new THREE.Raycaster());
   const mouseRef = useRef(new THREE.Vector2());
   const [followPlanet, setFollowPlanet] = useState(null);
+  const [followAsteroid, setFollowAsteroid] = useState(null);
   const [planetInfo, setPlanetInfo] = useState(null);
-
+  const grandeGroup = new THREE.Group();
+  const pequeñoGroup = new THREE.Group();
+  const phaGroup = new THREE.Group();
+  const cometasEnanosGroup = new THREE.Group();
+  const planetasGroup = new THREE.Group();
   const trailPoints = {}; // Objeto para almacenar los puntos de rastro de cada planeta
 
+
+  const [searchTerm, setSearchTerm] = useState('');
+
+  
+  // definir una lista para almacenar los planetas y ids
+  const planets_renderes = [];
   const createSun = (scene) => {
     const loader = new GLTFLoader();
     loader.load('/planetas/Sol.glb', (gltf) => {
@@ -223,7 +202,30 @@ const SolarSystem = () => {
     });
   };
   
+  function createLabel(text) {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    
+    // Ajusta el tamaño del lienzo y la fuente
+    canvas.width = 1000; // Cambia el ancho según sea necesario
+    canvas.height = 500; // Cambia la altura según sea necesario
+    
+    context.font = '250px Arial'; // Aumenta el tamaño de la fuente
+    context.fillStyle = 'white'; // Asegúrate de que el texto sea blanco
+    context.textAlign = 'center'; // Alinear texto al centro
+    context.textBaseline = 'middle'; // Alinear texto verticalmente
+    context.fillText(text, canvas.width / 2, canvas.height / 2); // Centra el texto en el canvas
   
+    const texture = new THREE.CanvasTexture(canvas);
+    const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+    const sprite = new THREE.Sprite(spriteMaterial);
+    
+    // Ajusta la escala del sprite
+    sprite.scale.set(2, 1, 1); // Cambia el tamaño del sprite según sea necesario
+  
+    return sprite;
+  }
+
   useEffect(() => {
     
     const scene = new THREE.Scene();
@@ -244,7 +246,7 @@ const SolarSystem = () => {
     light.position.set(0, 0, 0);
     scene.add(light);
 
-
+   
 
 
   // Crear sol
@@ -276,12 +278,10 @@ sun.scale.set(0.03, 0.03, 0.03); // Cambiar a 0.1, 0.1, 0.1
 
     
     
-
-    // Crear asteroides y añadirlos a la escena
 // Crear asteroides y añadirlos a la escena
 asteroidsData.forEach((asteroid) => {
   const asteroidMesh = createAsteroid(asteroid, "GRANDE");
-  scene.add(asteroidMesh);
+  grandeGroup.add(asteroidMesh);
 
   // Crear órbitas
   const orbitPoints = generateAsteroidOrbitPoints(
@@ -290,7 +290,7 @@ asteroidsData.forEach((asteroid) => {
     asteroid.i,           // Inclinación
     asteroid.w            // Argumento del periastro
   );
-  
+
   console.log('Orbit Points for', asteroid.name, orbitPoints); // Depuración
   
   const orbitGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
@@ -299,9 +299,18 @@ asteroidsData.forEach((asteroid) => {
     opacity: 0.15,
     transparent: true,
   });
-  
+
   const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
-  scene.add(orbitLine);
+  grandeGroup.add(orbitLine);
+
+  // Crear y agregar la etiqueta
+  console.log('Creating label for', asteroid.name); // Depuración
+  const label = createLabel(asteroid.name); // Asumiendo que `asteroid` tiene un atributo `name`
+  
+  // Posicionar la etiqueta sobre el asteroide
+  label.position.copy(asteroidMesh.position); // Ajusta según sea necesario para posicionar adecuadamente
+  label.position.y += 1; // Eleva la etiqueta sobre el asteroide
+  grandeGroup.add(label);
 });
 
 
@@ -311,7 +320,7 @@ asteroidsData.forEach((asteroid) => {
 // Crear asteroides pequeños y añadirlos a la escena
 asteroidePequeño.forEach((asteroid) => {
   const asteroidMesh = createAsteroid(asteroid, "PEQUEÑO");
-  scene.add(asteroidMesh);
+  pequeñoGroup.add(asteroidMesh);
 
   // Crear órbitas para asteroides pequeños
   const orbitPoints = generateAsteroidOrbitPoints(
@@ -331,15 +340,15 @@ asteroidePequeño.forEach((asteroid) => {
   });
 
   const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
-  scene.add(orbitLine);
+  pequeñoGroup.add(orbitLine);
 });
 
+// Crear asteroides y añadirlos a la escena
+ateroidePHA.forEach((asteroid) => {
+  const asteroidMesh = createAsteroid(asteroid, "PHA");
+  phaGroup.add(asteroidMesh);
 
-     // Crear asteroides y añadirlos a la escena
-     ateroidePHA.forEach((asteroid) => {
-      const asteroidMesh = createAsteroid(asteroid, "PHA");
-      scene.add(asteroidMesh);
-       // Crear órbitas para asteroides pequeños
+  // Crear órbitas para asteroides pequeños
   const orbitPoints = generateAsteroidOrbitPoints(
     asteroid.a * scale,   // Semieje mayor
     asteroid.e,           // Excentricidad
@@ -357,15 +366,18 @@ asteroidePequeño.forEach((asteroid) => {
   });
 
   const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
-  scene.add(orbitLine);
-    });
+  phaGroup.add(orbitLine);
+
+
+});
+
 
 
 //cometas enanos
 // Crear cometas enanos y añadirlos a la escena
 cometasEnanos.forEach((cometa) => {
   const cometaMesh = createAsteroid(cometa, "COMETAS"); // Cambiar el tipo si es necesario
-  scene.add(cometaMesh);
+  cometasEnanosGroup.add(cometaMesh);
 
   // Crear órbitas para cometas enanos
   const orbitPoints = generateAsteroidOrbitPoints(
@@ -385,8 +397,14 @@ cometasEnanos.forEach((cometa) => {
   });
 
   const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
-  scene.add(orbitLine);
+  cometasEnanosGroup.add(orbitLine);
 });
+
+
+
+
+////
+
 
 
   const loader2 = new GLTFLoader();
@@ -403,42 +421,132 @@ const sunScale = 0.03; // Escala del Sol
 const sunRadiusReference = 100; // Valor de referencia para el radio del Sol (puedes ajustarlo como desees)
 const planetScaleFactor = sunRadiusReference; // Factor de escala relativo, como 1.0 para planetas en tu definición
 
+
+// Carga de los planetas
+console.log('IDs de los planetas:');
 planetsData.forEach((planet) => {
   loader2.load(`/planetas/${planet.model}`, (gltf) => {
-    const planetMesh = gltf.scene;
+      const planetMesh = gltf.scene;
+      planetMesh.name = planet.name;
+      console.log('Mesh cargado:', planet.name, planetMesh);
 
-    // Escalado del modelo del planeta
-    const planetScale = planet.radius * (sunRadiusReference / planetScaleFactor) / 100;
-    planetMesh.scale.set(planetScale, planetScale, planetScale);
-    planetMesh.name = planet.name;
-    planets.push({ mesh: planetMesh, ...planet });
-    scene.add(planetMesh);
+      // Escalado del modelo del planeta
+      const planetScale = planet.radius * (sunRadiusReference / planetScaleFactor) / 100;
+      planetMesh.scale.set(planetScale, planetScale, planetScale);
 
-    const label = createLabel(planet.name, 500); // Usar un tamaño más razonable
-    label.position.set(1, (planet.radius * (sunRadiusReference / planetScaleFactor)) + 5, 0); // Posición por encima del planeta
-    label.position.x = -label.scale.x / 2; // Centrar en el eje X
-    
-    // Agregar la etiqueta al planeta
-    planetMesh.add(label);
+      // Almacenar el ID y el nombre del planeta en el array
+      const planetGroupUUID = planetMesh.uuid; // UUID del mesh
+      const planetName = planet.name; // Nombre del planeta
+      
+      // Agregar el mesh al grupo antes de acceder al padre
+      planetasGroup.add(planetMesh);
 
-    // Crear órbitas
-    const orbitPoints = generateOrbitPoints(planet.a * scale, planet.e);
-    console.log('Orbit Points for', planet.name, orbitPoints); // Depuración
-    const orbitGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
-    const orbitMaterial = new THREE.LineBasicMaterial({
-      color: 0xffffff,
-      opacity: 0.5,
-      transparent: true,
-    });
-    const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
-    scene.add(orbitLine);
+      // Aquí verificamos si el mesh tiene un padre antes de acceder a su uuid
+      const parentGroupUUID = planetMesh.parent ? planetMesh.parent.uuid : null; // UUID del grupo padre
 
+      // Almacenar en planets
+      planets.push({ 
+          id: planetGroupUUID,   // Guardar el ID del mesh
+          name: planetName,      // Guardar el nombre del planeta
+          mesh: planetMesh,      // Guardar el mesh
+          ...planet              // Guardar otras propiedades del planeta
+      });
+
+      // Almacena solo el uuid del grupo padre y el nombre del planeta en planets_renderes
+      planets_renderes.push({
+          parentUUID: parentGroupUUID, // Guardar el UUID del grupo padre
+          name: planetName              // Guardar el nombre del planeta
+      });
+
+      // Crear órbitas
+      const orbitPoints = generateOrbitPoints(planet.a * scale, planet.e);
+      console.log('Orbit Points for', planet.name, orbitPoints); // Depuración
+      const orbitGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
+      const orbitMaterial = new THREE.LineBasicMaterial({
+          color: 0xffffff,
+          opacity: 0.5,
+          transparent: true,
+      });
+      const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
+      planetasGroup.add(orbitLine);
+
+      // Crear y agregar la etiqueta
+      console.log('Creating label for', planet.name); // Depuración
+      const label = createLabel(planet.name); // Crear la etiqueta usando la función proporcionada
+
+      // Posicionar la etiqueta sobre el planeta
+      label.position.copy(planetMesh.position); // Ajusta según sea necesario para posicionar adecuadamente
+      label.position.y += planetScale + 2000; // Eleva la etiqueta sobre el planeta, ajusta la altura según el tamaño del planeta
+
+      // Hacer que la etiqueta sea un hijo del planeta para que se mueva con él
+      planetMesh.add(label);
+
+      console.log('Modelo cargado:', planet.name, planetMesh);
+      console.log(planets); // Verifica los planetas
+      console.log(planets_renderes); // Verifica los planetas renderizados
   }, (xhr) => {
-    console.log((xhr.loaded / xhr.total * 100) + '% cargado para ' + planet.name);
+      console.log((xhr.loaded / xhr.total * 100) + '% cargado para ' + planet.name);
   }, (error) => {
-    console.error('Error al cargar el modelo de ' + planet.name + ':', error);
+      console.error('Error al cargar el modelo de ' + planet.name + ':', error);
   });
 });
+
+scene.add(grandeGroup);
+scene.add(pequeñoGroup);
+scene.add(phaGroup);
+scene.add(cometasEnanosGroup);
+scene.add(planetasGroup);
+
+
+
+ // Configuración del Raycaster y mouse
+ const raycaster = new THREE.Raycaster();
+ const mouse = new THREE.Vector2();
+
+ let followPlanet = null; // Variable global para almacenar el nombre del planeta a seguir
+
+ const handleClick = (event) => {
+   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+   mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+ 
+   raycaster.setFromCamera(mouse, camera);
+   const intersects = raycaster.intersectObjects(planets.map(p => p.mesh));
+ 
+   if (intersects.length > 0) {
+     const selectedMesh = intersects[0].object;
+ 
+     // UUID del mesh seleccionado
+     console.log('UUID del mesh seleccionado:', selectedMesh.uuid);
+ 
+     // UUID del parent
+     const parentUUID = selectedMesh.parent.uuid;
+     console.log('UUID del parent:', parentUUID);
+ 
+     // Buscar el planeta por el UUID del parent en lugar del mesh
+     const parentPlanet = planets.find(p => p.id === parentUUID);
+ 
+     if (parentPlanet) {
+       console.log('El parent coincide con el planeta:', parentPlanet.name);
+ 
+       // Establecer el planeta a seguir en la variable followPlanet
+       followPlanet = parentPlanet.name; // Actualiza el nombre del planeta que la cámara debe seguir
+       console.log(`Siguiendo al planeta: ${followPlanet}`);
+       
+       if (parentPlanet.name === "Venus") {
+         console.log("¡Planeta Venus detectado!");
+         // Puedes agregar cualquier acción específica para Venus aquí
+       }
+     } else {
+       console.log('No se encontró un planeta que coincida con el parentUUID.');
+     }
+   } else {
+     console.log('No se detectaron intersecciones');
+   }
+ };
+ 
+
+
+
 
 
 
@@ -596,23 +704,46 @@ cometasEnanos.forEach((cometa) => {
 });
 
         // Seguir al planeta seleccionado
+        
         if (followPlanet) {
-          
-          const planetMesh = planets.find((p) => p.name === followPlanet);
-          if (planetMesh) {
-            const distance = 30;
-            camera.position.set(
-              planetMesh.mesh.position.x,
-              planetMesh.mesh.position.y + 10,
-              planetMesh.mesh.position.z + distance
+          const planetData = planets.find((p) => p.name === followPlanet);
+          if (planetData) {
+            const distance = 30; // Distancia desde la que quieres observar el planeta
+        
+            // Calcular la nueva posición de la cámara suavemente
+            const targetPosition = new THREE.Vector3(
+              planetData.mesh.position.x,
+              planetData.mesh.position.y + 10, // Ajuste de altura
+              planetData.mesh.position.z + distance
             );
-            camera.lookAt(planetMesh.mesh.position);
-            setPlanetInfo(planetMesh);
+        
+            // Interpolación suave entre la posición actual de la cámara y la nueva
+            camera.position.lerp(targetPosition, 0.05); // El segundo parámetro controla la suavidad
+        
+            // Hacer que la cámara mire suavemente hacia el planeta
+            const targetLookAt = planetData.mesh.position.clone();
+            camera.lookAt(targetLookAt);
+        
+            // Actualiza la información del planeta
+            setPlanetInfo(planetData);
+        
+            // Deshabilitar controles de órbita mientras se sigue un planeta
+            controls.enabled = false;
           }
         } else {
+          // Si no se sigue un planeta, habilitar los controles de órbita nuevamente
+          controls.enabled = true;
+        
+          // Actualizar los controles para que la cámara sea libre
           controls.update();
+        
+          // Restablecer la información del planeta cuando no se sigue ninguno
           setPlanetInfo(null);
         }
+        
+      
+        
+
       }
     
       renderer.render(scene, camera);
@@ -622,22 +753,7 @@ cometasEnanos.forEach((cometa) => {
     animate();
     
 
-    // Manejar clics en los planetas
-    const handleClick = (event) => {
-      mouseRef.current.x = (event.clientX / window.innerWidth) * 2 - 1;
-      mouseRef.current.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-      raycasterRef.current.setFromCamera(mouseRef.current, camera);
-      const intersects = raycasterRef.current.intersectObjects(scene.children, true);
-
-      if (intersects.length > 0) {
-        const intersectedObject = intersects[0].object;
-        if (planets.some((planet) => planet.mesh.name === intersectedObject.name)) {
-          setFollowPlanet(intersectedObject.name);
-        }
-      }
-    };
-
+ 
     window.addEventListener('click', handleClick);
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
@@ -652,76 +768,181 @@ cometasEnanos.forEach((cometa) => {
     };
   }, [paused, followPlanet, speed]);
 
-function createLabel(text, size) {
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    context.font = `${size}px Arial`;
-    
-    // Configurar el color de la etiqueta aquí
-    context.fillStyle = 'white'; // Establecer el color a blanco
-    context.fillText(text, 0, size);
-    
-    const texture = new THREE.Texture(canvas);
-    texture.needsUpdate = true;
 
-    const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
-    const sprite = new THREE.Sprite(spriteMaterial);
-    sprite.scale.set(size / 100, size / 100, 1); // Ajustar la escala del sprite
+//ocultar planetas
 
-    return sprite;
+
+
+function showAstros(type) {
+  switch (type) {
+    case 'nea':
+      grandeGroup.visible = true;
+      pequeñoGroup.visible = true;
+      phaGroup.visible = false;
+      cometasEnanosGroup.visible = false;
+      planetasGroup.visible = false;
+      break;
+    case 'nec':
+      cometasEnanos.visible = true;
+      grandeGroup.visible = false;
+      pequeñoGroup.visible = false;
+      phaGroup.visible = false;
+      planetasGroup.visible = false;
+      break;
+    case 'pha':
+      phaGroup.visible = true;
+      grandeGroup.visible = false;
+      pequeñoGroup.visible = false;
+      cometasEnanosGroup.visible = false;
+      planetasGroup.visible = false;
+      break;
+    case 'planetas':
+      planetasGroup.visible = true;
+      grandeGroup.visible = false;
+      pequeñoGroup.visible = false;
+      phaGroup.visible = false;
+      cometasEnanosGroup.visible = false;
+      break;
+    case 'todos':
+      planetasGroup.visible = true;
+      grandeGroup.visible = true;
+      pequeñoGroup.visible = true;
+      phaGroup.visible = true;
+      cometasEnanosGroup.visible = true;
+      break;
+   
+    default:
+      break;
+  }
 }
+const [filteredPlanets, setFilteredPlanets] = useState([]);
 
-  
-const handleClick = (event) => {
-  // Normalizar las coordenadas del mouse
-  mouseRef.current.x = (event.clientX / window.innerWidth) * 2 - 1;
-  mouseRef.current.y = -(event.clientY / window.innerHeight) * 2 + 1;
+const handleInputChange = (e) => {
+  const value = e.target.value.toUpperCase(); // Convertir a mayúsculas
+  setSearchTerm(value);
 
-  // Actualizar el raycaster
-  raycasterRef.current.setFromCamera(mouseRef.current, cameraRef.current);
+  // Filtrar planetas según el término de búsqueda y eliminar duplicados
+  const filtered = [
+    ...new Map(
+      planets_renderes
+        .filter((planet) => planet.name.toUpperCase().includes(value)) // Filtrar en cualquier parte del nombre
+        .map((planet) => [planet.name.toUpperCase(), planet])
+    ).values(),
+  ];
 
-  // Calcular los objetos intersectados
-  const intersects = raycasterRef.current.intersectObjects(planets.map(planet => planet.mesh));
+  // Actualizar el estado de los planetas filtrados
+  setFilteredPlanets(filtered);
+};
 
-  if (intersects.length > 0) {
-    const selectedPlanet = intersects[0].object;
+const handleSuggestionClick = (planet) => {
+  // Aquí llamamos a la función handleClick con el UUID del planeta seleccionado
+  handleClickSearch(planet.parentUUID);
+  // También puedes limpiar el input o las sugerencias si es necesario
+  setSearchTerm(planet.name.toUpperCase());
+  setFilteredPlanets([]); // Limpiar sugerencias al hacer clic
+};
 
-    // Establecer el estado de seguir al planeta seleccionado
-    setFollowPlanet(selectedPlanet);
-
-    // Actualizar la información del planeta (para mostrar en la etiqueta)
-    const planetData = planets.find(planet => planet.mesh === selectedPlanet);
-    setPlanetInfo(planetData);
+const handleClickSearch = (uuid) => {
+  // Aquí va tu lógica de manejo de clics
+  const selectedPlanet = planets_renderes.find(p => p.parentUUID === uuid);
+  if (selectedPlanet) {
+    console.log('Planeta seleccionado:', selectedPlanet.name);
+    // Realiza el resto de la lógica como en tu función original
   }
 };
 
-  
-  return (
-    <div style={{ position: 'relative', height: '100vh' }}>
-      <div ref={mountRef} />
-      <div style={{ position: 'absolute', top: '10px', left: '10px', color: '#fff', zIndex: 1 }}>
-        <button onClick={() => setPaused((prev) => !prev)}>
-          {paused ? 'Reanudar' : 'Pausar'}
-        </button>
-        {/* Botón para dejar de seguir al planeta */}
-        {followPlanet && (
-          <button onClick={() => setFollowPlanet(null)}>
-            Dejar de seguir
-          </button>
-        )}
-      </div>
-      {planetInfo && (
-        <div className='card'>
-          <h2>Nombre: {planetInfo.name}</h2>
-          <p>Radio: {planetInfo.radius}</p>
-          <p>Distancia del sol: {planetInfo.a}</p>
-          <p>Excentricidad: {planetInfo.e}</p>
-          <p>Velocidad orbital: {planetInfo.orbitalSpeed}</p>
-          
-        </div>
+return (
+  <div style={{ position: 'relative', height: '100vh' }}>
+    <div style={{ position: 'absolute', top: '10px', left: '10px', color: '#fff', zIndex: 1 }}>
+      {/* Campo de entrada de búsqueda */}
+      <input
+        type="text"
+        placeholder="Buscar..."
+        className="search-input"
+        value={searchTerm}
+        onChange={handleInputChange} // Actualiza el término de búsqueda y los resultados
+      />
+      {searchTerm && filteredPlanets.length > 0 && (
+        <ul className="suggestions" style={suggestionsStyle}>
+          {filteredPlanets.map((planet) => (
+            <li
+              key={planet.parentUUID}
+              style={suggestionItemStyle}
+              onClick={() => handleSuggestionClick(planet)} // Manejar clic en la sugerencia
+            >
+              {planet.name.toUpperCase()} {/* Convertir a mayúsculas para mostrar */}
+            </li>
+          ))}
+        </ul>
       )}
+
+     
+
+      {/* Botones para filtrar */}
+      <button onClick={() => showAstros('nea')}>NEA</button>
+      <button onClick={() => showAstros('nec')}>NEC</button>
+      <button onClick={() => showAstros('pha')}>PHA</button>
+      <button onClick={() => showAstros('planetas')}>Planetas</button>
+      <button onClick={() => showAstros('todos')}>Mostrar todo</button>
+
+      {/* Botón para dejar de seguir al planeta */}
+      
     </div>
-  );
+
+    <div ref={mountRef} />
+
+    {planetInfo && (
+  <div className="card">
+    <h2>Nombre: {planetInfo.name}</h2>
+    <p>Radio: {planetInfo.radius}</p>
+    <p>Distancia del sol: {planetInfo.a}</p>
+    <p>Excentricidad: {planetInfo.e}</p>
+    <p>Velocidad orbital: {planetInfo.orbitalSpeed}</p>
+
+    <button className="unfollow-button" onClick={() => {
+      setFollowPlanet(null);
+      window.location.reload(); // Recargar la página
+    }}>
+      Dejar de seguir
+    </button>
+
+    {/* Botón para buscar en Google */}
+    <button
+      className="search-button"
+      onClick={() => {
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(planetInfo.name)}`;
+        window.open(searchUrl, '_blank'); // Abre en nueva pestaña
+      }}
+    >
+      Buscar en Google
+    </button>
+  </div>
+)}
+
+
+  </div>
+);
+}
+
+
+// Estilos para las sugerencias
+const suggestionsStyle = {
+  listStyleType: 'none',
+  padding: '0',
+  margin: '0',
+  border: '1px solid #ccc',
+  borderRadius: '5px',
+  maxHeight: '150px',
+  overflowY: 'auto',
+  position: 'absolute', // Para que se superponga sobre otros elementos
+  backgroundColor: 'black',
+  zIndex: '1000',
 };
 
+// Estilo para cada item de sugerencia
+const suggestionItemStyle = {
+  padding: '10px',
+  cursor: 'pointer',
+  transition: 'background-color 0.3s',
+};
 export default SolarSystem;
