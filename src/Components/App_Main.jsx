@@ -914,7 +914,13 @@ return (
         window.open(searchUrl, '_blank'); // Abre en nueva pestaña
       }}
     >
-      Buscar en Google
+      Buscar
+    </button>
+    <button
+      className="search-button"
+      
+    >
+      Ver en AR
     </button>
   </div>
 )}
