@@ -1,12 +1,12 @@
 import React from 'react';
-import ThreeJSExample from './Components/App1';
-import D3Example from './Components/App2';
+import SolarSystem from './Components/App_Main';
+
 
 function App() {
   return (
     <div>
 
-      <ThreeJSExample />
+      <SolarSystem />
       
     </div>
   );

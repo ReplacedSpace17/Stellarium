@@ -1,0 +1,25 @@
+/* Estilos para el cuadro de información del planeta */
+.card{
+    position: absolute;
+    top: 100px;
+    left: 10px;
+    color: #fff;
+    z-index: 1;
+    background: rgb(17, 60, 95); /* Fondo semi-transparente */
+    border-radius: 8px; /* Bordes redondeados */
+    border: 1px solid #fff; /* Borde blanco */
+    padding: 15px; /* Espaciado interno */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Sombra para destacar */
+    max-width: 250px; /* Ancho máximo */
+  }
+  
+  .planet-info h2 {
+    margin: 0;
+    font-size: 1.5rem; /* Tamaño de fuente del título */
+  }
+  
+  .planet-info p {
+    margin: 5px 0; /* Espaciado entre párrafos */
+    font-size: 1rem; /* Tamaño de fuente de los párrafos */
+  }
+  
