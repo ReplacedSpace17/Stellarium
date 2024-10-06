@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import planetsData from './data/planets.json';
 import './style.css';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+
 
 import asteroidsData from './data/AsteroidesG.json';
 import asteroidePequeño from './data/AsteroidesP.json';
@@ -18,6 +20,10 @@ const solveKepler = (M, e, tolerance = 1e-6) => {
   }
   return E;
 };
+
+
+const loader = new GLTFLoader();
+const modelPath = 'ruta/a/tu/modelo.glb'; // Cambia esta ruta por la correcta
 
 
 const createAsteroid = (asteroid, type) => {
@@ -58,7 +64,41 @@ const createAsteroid = (asteroid, type) => {
  
 };
 
+// Función para crear polvo azul orbitando alrededor de un objeto
+const createOrbitingDust = (scene, centerObject) => {
+  const dustGeometry = new THREE.BufferGeometry();
+  const dustMaterial = new THREE.PointsMaterial({
+    color: 0x00bfff, // Azul claro
+    size: 0.2,       // Tamaño de cada partícula
+    opacity: 0.6,
+    transparent: true,
+  });
 
+  const dustVertices = [];
+  const numParticles = 500; // Número de partículas de polvo
+  const dustRadius = 20;    // Radio de la órbita de las partículas
+
+  for (let i = 0; i < numParticles; i++) {
+    // Generar partículas en una esfera alrededor del centro del objeto
+    const angle = Math.random() * 2 * Math.PI;
+    const radius = dustRadius + (Math.random() - 0.5) * dustRadius * 0.5; // Varía el radio
+    const x = centerObject.position.x + radius * Math.cos(angle);
+    const z = centerObject.position.z + radius * Math.sin(angle);
+    const y = (Math.random() - 0.5) * dustRadius; // Añadir variación en el eje Y
+
+    dustVertices.push(x, y, z);
+  }
+
+  dustGeometry.setAttribute(
+    'position',
+    new THREE.Float32BufferAttribute(dustVertices, 3)
+  );
+
+  const dust = new THREE.Points(dustGeometry, dustMaterial);
+  scene.add(dust);
+
+  return dust;
+};
 
 // Función para generar los puntos de la órbita
 
@@ -108,6 +148,9 @@ const createStarField = (scene) => {
   const stars = new THREE.Points(starGeometry, starMaterial);
   scene.add(stars);
 };
+
+
+
 
 
 
@@ -238,6 +281,7 @@ planetsData.forEach((planet) => {
             r * scale * Math.sin(ν)
           );
         });
+        
 
         
         // Seguir al planeta seleccionado

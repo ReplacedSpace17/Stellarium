@@ -10,7 +10,8 @@
     "Ω": 48.330,
     "color": "#aaaaaa",
     "orbitalSpeed": 4.74,
-    "M0": 0
+    "M0": 0,
+    "model": "Mercurio.glb"
   },
   {
     "name": "Venus",
@@ -23,7 +24,8 @@
     "Ω": 76.68069,
     "color": "#ffcc00",
     "orbitalSpeed": 3.50,
-    "M0": 0
+    "M0": 0,
+    "model": "Venus.glb"
   },
   {
     "name": "Tierra",
@@ -36,7 +38,8 @@
     "Ω": 0.0,
     "color": "#0066ff",
     "orbitalSpeed": 2.98,
-    "M0": 0
+    "M0": 0,
+    "model": "Tierra.glb"
   },
   {
     "name": "Marte",
@@ -49,7 +52,8 @@
     "Ω": 49.57854,
     "color": "#ff3300",
     "orbitalSpeed": 2.41,
-    "M0": 0
+    "M0": 0,
+    "model": "Marte.glb"
   },
   {
     "name": "Júpiter",
@@ -62,7 +66,8 @@
     "Ω": 100.55615,
     "color": "#ff9933",
     "orbitalSpeed": 1.31,
-    "M0": 0
+    "M0": 0,
+    "model": "Jupiter.glb"
   },
   {
     "name": "Saturno",
@@ -75,7 +80,8 @@
     "Ω": 113.71504,
     "color": "#ffcc66",
     "orbitalSpeed": 0.97,
-    "M0": 0
+    "M0": 0,
+    "model": "Saturno.glb"
   },
   {
     "name": "Urano",
@@ -88,7 +94,8 @@
     "Ω": 74.22988,
     "color": "#33ccff",
     "orbitalSpeed": 0.68,
-    "M0": 0
+    "M0": 0,
+    "model": "Urano.glb"
   },
   {
     "name": "Neptuno",
@@ -101,6 +108,7 @@
     "Ω": 131.72169,
     "color": "#3333ff",
     "orbitalSpeed": 0.54,
-    "M0": 0
+    "M0": 0,
+    "model": "Neptuno.glb"
   }
 ]
